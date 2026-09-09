@@ -1,6 +1,7 @@
 """Run from repository root; requires PyYAML 6.0.3."""
 from pathlib import Path
 import re, yaml
+from check_dependencies import check_go_overlay
 root=Path(__file__).resolve().parents[1]
 configs=list(root.glob('*/config.yaml'));assert len(configs)==1
 folder=configs[0].parent
@@ -24,6 +25,8 @@ if config['name']=='NUI':
 else:
     assert config['schema']['token']=='password'
     assert set(config['ports'])=={'4222/tcp'}
+check_go_overlay(folder/'dependencies')
+print('PASS: Go dependency overlay retains required modules and checksums')
 docker=(folder/'Dockerfile').read_text()
 for line in docker.splitlines():
     if line.startswith('FROM ') and '/' in line or line.startswith(('FROM nats:','FROM golang:')):
