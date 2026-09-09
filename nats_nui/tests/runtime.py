@@ -90,10 +90,12 @@ try:
     os.kill(int(Path('/run/nginx/nginx.pid').read_text()),signal.SIGTERM)
     assert p.wait(timeout=10)!=0,'gateway failure did not stop app'
 finally:stop(p)
-for bad_ids in (None, False, 'all', ['invalid;'], [1], [ADMIN_ID + '\n']):
+for bad_ids in (None, False, 'all', ['invalid;'], [1], [ADMIN_ID + '\n'],
+                [ADMIN_ID + '\ninclude /tmp/forbidden;']):
     Path('/db/options.json').write_text(json.dumps({'console_admin_user_ids': bad_ids}))
-    invalid = subprocess.Popen(['/run.sh'], stdout=log, stderr=log)
-    assert invalid.wait(timeout=5) != 0, 'invalid administrator setting accepted'
+    invalid = subprocess.run(['/run.sh'], capture_output=True, timeout=5)
+    assert invalid.returncode != 0, 'invalid administrator setting accepted'
+    assert b'Invalid Console administrators setting.' in invalid.stdout, 'invalid ID reached nginx instead of the validator'
 log.seek(0);logs=log.read()
 assert b'Incoming request' not in logs
 assert b'error importing cli contexts' not in logs
