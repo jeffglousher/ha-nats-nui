@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.4.2
+
+Prevent concurrent connection deletion and requests from racing in the connection
+pool. Retry after a failed connection refresh instead of reusing the closed
+connection. Synchronize status notifications with subscription cancellation and
+close notification channels when a connection closes. Run the full connection
+package and regression tests with Go's race detector during each image build.
+
 ## 0.4.1
 
 Apply Alpine security updates during builds, including patched OpenSSL libraries.

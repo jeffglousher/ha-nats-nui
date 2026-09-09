@@ -10,3 +10,10 @@ endorse these changes. Artwork is separately attributed in ARTWORK.md.
 The wrapper also patches schema containment and rebuilds Go/frontend dependencies
 from the manifests and lockfiles in nats_nui/dependencies. Go 1.27.1 and
 govulncheck 1.8.0 are selected explicitly for the backend build.
+
+The connection-pool patch serializes cache cleanup with concurrent requests and
+removes closed connections after a failed refresh. Regression tests run with Go's
+race detector; the C compiler used by those tests stays in the build stage.
+The connection-events patch synchronizes status reads, notifications and listener
+cancellation, closes subscriptions on shutdown, and removes races from the
+upstream test's event collection so the whole connection package can be checked.

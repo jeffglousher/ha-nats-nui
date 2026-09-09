@@ -1,5 +1,5 @@
 FROM golang:1.27-alpine@sha256:cf6fca6641884b8433441b2b0652976f975e1d0fdd26d177eaaf8596087f3125 AS backend
-RUN apk upgrade --no-cache && apk add --no-cache git nodejs npm
+RUN apk upgrade --no-cache && apk add --no-cache git nodejs npm gcc musl-dev
 ENV GOTOOLCHAIN=go1.27.1
 WORKDIR /src
 RUN git init . && git remote add origin https://github.com/nats-nui/nui.git \
@@ -15,6 +15,12 @@ COPY patches/service-logs.patch /tmp/service-logs.patch
 RUN git apply --check /tmp/service-logs.patch && git apply /tmp/service-logs.patch
 COPY patches/schema-containment.patch /tmp/schema-containment.patch
 RUN git apply --check /tmp/schema-containment.patch && git apply /tmp/schema-containment.patch
+COPY patches/connection-pool.patch /tmp/connection-pool.patch
+RUN git apply --check /tmp/connection-pool.patch && git apply /tmp/connection-pool.patch
+COPY patches/connection-events.patch /tmp/connection-events.patch
+RUN git apply --check /tmp/connection-events.patch && git apply /tmp/connection-events.patch
+COPY tests/connection_pool_test.go /src/internal/connection/ha_pool_test.go
+RUN CGO_ENABLED=1 go test -race ./internal/connection -count=1 -timeout=2m
 COPY tests/schema_security_test.go /src/internal/protoschema/ha_security_test.go
 RUN go test ./internal/protoschema -run TestHAPathContainment -count=1
 RUN CGO_ENABLED=0 go build -ldflags '-X main.Version=0.9.3' -o /nui-web ./cmd/server/main.go

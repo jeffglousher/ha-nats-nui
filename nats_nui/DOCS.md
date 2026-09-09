@@ -73,6 +73,8 @@ update in place and reopen through HA. No connection re-entry is required.
   Old direct-port or internal ingress bookmarks are not supported.
 - **Connection fails:** verify the broker is reachable from HA and check its
   port, authentication method, token or credentials, and TLS requirements.
+  After correcting a failed connection change, reopen the connection or retry
+  the operation; a failed refresh no longer requires restarting the app.
 - **Connected but no streams:** confirm the broker has JetStream enabled and
   the selected account has streams and permission to list them.
 - **Live updates stop:** reopen the app from HA. If using an external HA reverse
