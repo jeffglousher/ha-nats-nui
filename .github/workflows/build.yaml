@@ -28,6 +28,7 @@ jobs:
         run: |
           python3 -m pip install PyYAML==6.0.3
           python3 tools/check_release.py
+          python3 -m unittest discover -s tools -p "test_check_dependencies.py"
           sh -n nats_nui/run.sh
       - name: Build and run isolated runtime tests
         run: docker build --build-arg BUILD_VERSION=ci --build-arg BUILD_ARCH=${{ matrix.arch }} -t addon-test ./nats_nui
