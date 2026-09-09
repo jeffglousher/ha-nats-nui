@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.4.1
+
+Apply Alpine security updates during builds, including patched OpenSSL libraries.
+Correct exit-trap quoting for shell analysis; shutdown cleanup behavior is preserved.
+
 ## 0.4.0
 
 Rebuild patched Go/frontend dependencies with Go 1.27.1; run 81 frontend tests and a Linux binary vulnerability gate. Harden schema file containment and ingress request isolation. Add traversal, symlink, spoofed-header, and cross-site request regression checks.
