@@ -7,6 +7,9 @@ RUN git init . && git remote add origin https://github.com/nats-nui/nui.git \
     && git checkout --detach FETCH_HEAD
 COPY dependencies/go.mod dependencies/go.sum /src/
 COPY dependencies/package.json dependencies/package-lock.json /src/frontend/
+COPY patches/bucket-wire-format.patch /tmp/bucket-wire-format.patch
+RUN git apply --check /tmp/bucket-wire-format.patch && git apply /tmp/bucket-wire-format.patch
+COPY tests/buckets.test.ts /src/frontend/src/api/buckets.test.ts
 RUN cd frontend && npm ci --ignore-scripts --no-audit --no-fund && npm exec -- vitest run && npm run build
 # No non-ingress listener: the backend is reachable only inside this container.
 RUN grep -F 'return a.Listen(":" + a.Port)' internal/nui/server.go \

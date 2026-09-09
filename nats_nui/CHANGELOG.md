@@ -1,3 +1,10 @@
+# 0.4.3
+
+- Fix key/value bucket size, maximum value size and replica settings being
+  silently ignored because frontend field names differed from nats.go JSON.
+- Populate those settings correctly when reopening a bucket for editing.
+- Add frontend API contract regression tests for bucket creation and updates.
+
 # Changelog
 
 ## 0.4.2

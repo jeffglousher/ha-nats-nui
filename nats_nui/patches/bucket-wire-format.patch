@@ -1,0 +1,56 @@
+--- a/frontend/src/api/buckets.ts
++++ b/frontend/src/api/buckets.ts
+@@ -3,14 +3,35 @@
+ 
+ 
+ 
++// Keep the UI model stable while using nats.go's explicit JSON wire names.
++function encode(bucket: BucketConfig) {
++    const { maxBytes, maxValueSize, replicas, ...rest } = bucket
++    return { ...rest, max_bytes: maxBytes, max_value_size: maxValueSize, num_replicas: replicas }
++}
++
++function decode(state: any): BucketState {
++    if (!state) return state
++    const config = state.config
++    return {
++        ...state,
++        backingStore: state.backing_store,
++        config: config ? {
++            ...config,
++            maxBytes: config.max_bytes,
++            maxValueSize: config.max_value_size,
++            replicas: config.num_replicas,
++        } : undefined,
++    }
++}
++
+ /** INDEX */
+ function index(connectionId: string, opt?: CallOptions): Promise<BucketState[]> {
+-	return ajax.get(`connection/${connectionId}/kv`, null, opt)
++	return ajax.get(`connection/${connectionId}/kv`, null, opt).then(states => (states ?? []).map(decode))
+ }
+ 
+ /** GET */
+ function get(connectionId: string, bucketName: string, opt?: CallOptions): Promise<BucketState> {
+-	return ajax.get(`connection/${connectionId}/kv/${bucketName}`, null, opt)
++	return ajax.get(`connection/${connectionId}/kv/${bucketName}`, null, opt).then(decode)
+ }
+ 
+ /** DELETE */
+@@ -22,13 +43,13 @@
+ /** CREATE */
+ function create(connectionId: string, bucket: BucketConfig, opt?: CallOptions): Promise<BucketState> {
+ 	if (!connectionId || !bucket) return
+-	return ajax.post(`connection/${connectionId}/kv`, bucket, opt)
++	return ajax.post(`connection/${connectionId}/kv`, encode(bucket), opt).then(decode)
+ }
+ 
+ /** UPDATE */
+ function update(connectionId: string, bucket: BucketConfig, opt?: CallOptions): Promise<BucketState> {
+ 	if (!connectionId || !bucket) return
+-	return ajax.post(`connection/${connectionId}/kv/${bucket.bucket}`, bucket, opt)
++	return ajax.post(`connection/${connectionId}/kv/${bucket.bucket}`, encode(bucket), opt).then(decode)
+ }
+ 
+ /** PURGE DELETED keys from bucket */
