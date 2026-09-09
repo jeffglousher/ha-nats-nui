@@ -19,7 +19,7 @@ cleanup() {
     kill "$nui_pid" "$proxy_pid" 2>/dev/null || true
     wait "$nui_pid" "$proxy_pid" 2>/dev/null || true
 }
-trap cleanup EXIT
+trap 'cleanup' EXIT
 trap 'exit 0' INT TERM
 ready=false
 startup_attempts=0
