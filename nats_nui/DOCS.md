@@ -6,11 +6,15 @@
    administrators**, save, and start the app. Enable **Start on boot** and
    **Watchdog** on the Info page.
 2. Select **Open Web UI**. Optionally enable **Show in sidebar**.
-3. In NUI, select **ALL**, then **NEW** to add a connection.
-4. Enter a name and your server address, such as `nats://NATS_HOST:4222`.
-5. Choose the server's authentication method, enter its credentials and save.
-6. Select the connection and use its action icons to browse streams, messages
-   or key/value buckets.
+3. With the companion NATS app running in shared-token mode without TLS, wait
+   up to 15 seconds for **Local NATS** to appear automatically.
+4. Select the connection to browse streams, messages or key/value buckets.
+5. To add other servers, select **ALL**, then **NEW**. Enter a name, server
+   address and authentication details, then save. TLS and individual-user
+   connections also use this editor.
+
+The local connection is imported once. Edit or delete it in NUI; restarting
+will not overwrite your changes or recreate a deleted connection.
 
 NUI connects to the server from inside Home Assistant. `localhost` refers to
 the NUI container, not your computer or another app. Use a hostname or address
@@ -26,7 +30,7 @@ do not bookmark an internal ingress URL, which is session-dependent.
 
 The gateway accepts only HA Supervisor requests carrying a listed user's ID.
 The NUI backend is reachable
-only inside its own container. No HA API, host-network or privileged access is
+only inside its own container. No Home Assistant Core API, host-network or privileged access is
 required. When using HA remotely, use your normal secure HA access method.
 
 Access to this app permits use of its saved NATS credentials. Broker permissions
