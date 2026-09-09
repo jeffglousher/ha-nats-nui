@@ -1,5 +1,5 @@
 FROM golang:1.27-alpine@sha256:cf6fca6641884b8433441b2b0652976f975e1d0fdd26d177eaaf8596087f3125 AS backend
-RUN apk add --no-cache git nodejs npm
+RUN apk upgrade --no-cache && apk add --no-cache git nodejs npm
 ENV GOTOOLCHAIN=go1.27.1
 WORKDIR /src
 RUN git init . && git remote add origin https://github.com/nats-nui/nui.git \
@@ -22,7 +22,7 @@ RUN go run golang.org/x/vuln/cmd/govulncheck@v1.8.0 -mode=binary /nui-web
 
 FROM ghcr.io/nats-nui/nui:0.9.3@sha256:331b3f34f8aa626f88e3aa3e35749196607a3a56d7fddc6fb642938dcd659c04 AS runtime
 USER root
-RUN apk add --no-cache nginx tini su-exec jq && mkdir -p /run/nginx
+RUN apk upgrade --no-cache && apk add --no-cache nginx tini su-exec jq && mkdir -p /run/nginx
 ARG BUILD_VERSION
 ARG BUILD_ARCH
 LABEL io.hass.type="addon" io.hass.version="${BUILD_VERSION}" io.hass.arch="${BUILD_ARCH}"
@@ -39,7 +39,7 @@ ENTRYPOINT ["/sbin/tini", "-g", "--", "/run.sh"]
 CMD []
 
 FROM runtime AS validation
-RUN apk add --no-cache python3 nodejs
+RUN apk upgrade --no-cache && apk add --no-cache python3 nodejs
 COPY tests/runtime.py /runtime-test.py
 COPY tests/frontend.cjs /frontend/tests/frontend.cjs
 COPY ha-init.js /frontend/ha-init.js
