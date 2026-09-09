@@ -37,14 +37,18 @@ for unexpected removals or downgrades and run the release checks and both native
 image builds; these compile the actual application and run vulnerability checks.
 The early overlay guard rejects missing required modules or archive checksums.
 
-Ordinary automated Go version PRs are disabled because their isolated tidy step
-cannot see upstream source. Dependency alerts, security updates, the weekly image
-scan and binary `govulncheck` remain enabled. Any generated Go security PR still
-needs the source-aware process above; do not merge a destructive manifest diff.
+## Released upstream policy
 
-React, React DOM and their type packages update as one group. Major React, MSW
-and TypeScript version PRs are deferred until the upstream source is migrated;
-this version-update policy does not disable vulnerability alerts. A compiler
-upgrade must run `tsc` against the pinned frontend configuration as well as Vite:
-the production Vite build alone does not type-check the application. MSW upgrades
-must migrate the mock handlers and browser worker API and run the frontend tests.
+Follow released NUI versions, pinned by source revision and image digest. Update
+NATS server through its released image versions in the separate server app.
+Avoid independent library migrations merely to follow newer dependency versions.
+Ordinary Go and npm overlay version PRs are disabled. Docker and GitHub Actions
+version updates, vulnerability alerts, security updates, weekly image scans and
+binary `govulncheck` remain enabled.
+
+Known vulnerabilities remain real findings: do not dismiss them just because
+they originate upstream. Prefer a fixed upstream release when available; retain
+necessary security patches until it incorporates them. Any security overlay
+change must build against the pinned upstream source and pass the existing
+checks. A generated security PR is not automatically safe to merge, particularly
+when Go's isolated tidy step removes the source-dependent requirement graph.
