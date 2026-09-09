@@ -14,12 +14,14 @@ su-exec nui /cmd/nui-web --db-path=/db --proto-schemas-path=/db/protoschemas/def
 nui_pid=$!
 nginx -g 'daemon off;' &
 proxy_pid=$!
+# Invoked indirectly by the EXIT trap; ShellCheck 0.9 cannot follow this call.
+# shellcheck disable=SC2317
 cleanup() {
     log INFO "Stopping NUI and its ingress gateway."
     kill "$nui_pid" "$proxy_pid" 2>/dev/null || true
     wait "$nui_pid" "$proxy_pid" 2>/dev/null || true
 }
-trap cleanup EXIT
+trap 'cleanup' EXIT
 trap 'exit 0' INT TERM
 ready=false
 startup_attempts=0
