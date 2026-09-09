@@ -12,9 +12,32 @@ updates:
     directory: /nats_nui/dependencies
     schedule:
       interval: weekly
-    open-pull-requests-limit: 5
+    # No Go source lives beside these overlays: tidy deletes all requirements.
+    # Zero disables version PRs; security updates and alerts remain enabled.
+    open-pull-requests-limit: 0
   - package-ecosystem: npm
     directory: /nats_nui/dependencies
     schedule:
       interval: weekly
     open-pull-requests-limit: 5
+    groups:
+      react:
+        patterns:
+          - react
+          - react-dom
+          - "@types/react"
+          - "@types/react-dom"
+    # Major updates need migrations in the pinned upstream source first.
+    ignore:
+      - dependency-name: react
+        update-types: ["version-update:semver-major"]
+      - dependency-name: react-dom
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "@types/react"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "@types/react-dom"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: msw
+        update-types: ["version-update:semver-major"]
+      - dependency-name: typescript
+        update-types: ["version-update:semver-major"]
