@@ -1,11 +1,11 @@
 name: NUI
-version: "0.4.3"
+version: 0.4.4
 slug: nats_nui
 description: NUI management interface through Home Assistant ingress only.
 url: https://github.com/jeffglousher/ha-nats-nui
 arch:
-  - amd64
-  - aarch64
+- amd64
+- aarch64
 startup: application
 boot: auto
 backup: cold
@@ -16,14 +16,16 @@ panel_icon: mdi:database
 panel_title: NUI
 panel_admin: true
 map:
-  - type: data
-    read_only: false
-    path: /db
+- type: data
+  read_only: false
+  path: /db
 options:
   log_level: warn
   console_admin_user_ids: []
 schema:
   log_level: list(info|warn|error)
   console_admin_user_ids:
-    - "match(^[0-9a-f]{32}$)"
+  - match(^[0-9a-f]{32}$)
 watchdog: http://[HOST]:8099/health
+hassio_api: true
+hassio_role: default

@@ -17,16 +17,18 @@ jq -r '(.console_admin_user_ids // []) | unique[] | "\(.) 1;"' /db/options.json 
 chown -R nui:nui /db
 nginx -t
 log INFO "Starting NUI. Access is through Home Assistant ingress only."
-su-exec nui /cmd/nui-web --db-path=/db --proto-schemas-path=/db/protoschemas/default --log-level="$log_level" --nats-cli-contexts= &
+env -u SUPERVISOR_TOKEN su-exec nui /cmd/nui-web --db-path=/db --proto-schemas-path=/db/protoschemas/default --log-level="$log_level" --nats-cli-contexts= &
 nui_pid=$!
+python3 /provision.py &
+provision_pid=$!
 nginx -g 'daemon off;' &
 proxy_pid=$!
 # Invoked indirectly by the EXIT trap; ShellCheck 0.9 cannot follow this call.
 # shellcheck disable=SC2317
 cleanup() {
     log INFO "Stopping NUI and its ingress gateway."
-    kill "$nui_pid" "$proxy_pid" 2>/dev/null || true
-    wait "$nui_pid" "$proxy_pid" 2>/dev/null || true
+    kill "$nui_pid" "$proxy_pid" "$provision_pid" 2>/dev/null || true
+    wait "$nui_pid" "$proxy_pid" "$provision_pid" 2>/dev/null || true
 }
 trap 'cleanup' EXIT
 trap 'exit 0' INT TERM
