@@ -1,0 +1,39 @@
+--- a/internal/protoschema/filesystem_repo.go
++++ b/internal/protoschema/filesystem_repo.go
+@@ -37,7 +37,7 @@
+ 		}
+ 
+ 		// Skip directories and non-.proto files
+-		if d.IsDir() || !strings.HasSuffix(d.Name(), ".proto") {
++		if d.IsDir() || d.Type()&os.ModeSymlink != 0 || !strings.HasSuffix(d.Name(), ".proto") {
+ 			return nil
+ 		}
+ 
+@@ -76,6 +76,9 @@
+ 	if id == "" {
+ 		return nil, errors.New("schema ID cannot be empty")
+ 	}
++	if !filepath.IsLocal(id) {
++		return nil, errors.New("schema ID must remain inside the schema directory")
++	}
+ 	filePath := filepath.Join(dir, id+".proto")
+ 	relPath := id + ".proto"
+ 
+@@ -89,7 +92,16 @@
+ 
+ // loadSchemaFromFile loads a ProtoSchema from a file
+ func (r *FileSystemProtoRepo) loadSchemaFromFile(filePath, id, relPath string) (*ProtoSchema, error) {
+-	content, err := os.ReadFile(filePath)
++	root, err := os.OpenRoot(r.baseDir)
++	if err != nil {
++		return nil, errors.New("schema directory unavailable")
++	}
++	defer root.Close()
++	relative, err := filepath.Rel(r.baseDir, filePath)
++	if err != nil || !filepath.IsLocal(relative) {
++		return nil, errors.New("schema path outside directory")
++	}
++	content, err := root.ReadFile(relative)
+ 	if err != nil {
+ 		return nil, fmt.Errorf("failed to read proto file %s: %w", filePath, err)
+ 	}

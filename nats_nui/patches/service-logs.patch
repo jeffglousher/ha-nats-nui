@@ -1,0 +1,58 @@
+--- a/internal/nui/server.go
++++ b/internal/nui/server.go
+@@ -2,14 +2,12 @@
+ 
+ import (
+ 	"context"
+-	"log/slog"
+ 
+ 	"github.com/gofiber/contrib/websocket"
+ 	"github.com/gofiber/fiber/v2"
+ 	"github.com/gofiber/fiber/v2/middleware/compress"
+ 	"github.com/gofiber/fiber/v2/middleware/cors"
+ 	"github.com/nats-nui/nui/pkg/logging"
+-	slogfiber "github.com/samber/slog-fiber"
+ )
+ 
+ type App struct {
+@@ -26,14 +24,11 @@
+ 		App: fiber.New(
+ 			fiber.Config{
+ 				UnescapePath: true,
++				DisableStartupMessage: true,
+ 			}),
+ 		Port: port,
+ 		nui:  nui,
+ 		l:    l,
+-	}
+-	sLog, ok := l.(*slog.Logger)
+-	if ok {
+-		app.Use(slogfiber.New(sLog))
+ 	}
+ 	app.Use(compress.New(compress.Config{
+ 		Level: compress.LevelDefault,
+--- a/pkg/logging/slogger.go
++++ b/pkg/logging/slogger.go
+@@ -25,7 +25,7 @@
+ 	if err != nil {
+ 		return nil, err
+ 	}
+-	return slog.New(slog.NewJSONHandler(w, &slog.HandlerOptions{Level: parseLogLevel(logLevel)})), nil
++	return slog.New(slog.NewTextHandler(w, &slog.HandlerOptions{Level: parseLogLevel(logLevel)})), nil
+ }
+ func openLogWriter(output string) (io.Writer, error) {
+ 	if output != "" {
+--- a/pkg/storage/docstore.go
++++ b/pkg/storage/docstore.go
+@@ -15,9 +15,9 @@
+ 
+ func NewDocStore(path string) (*DB, error) {
+ 
+-	opts := badger.DefaultOptions(path)
++	opts := badger.DefaultOptions(path).WithLoggingLevel(badger.WARNING)
+ 	if path == "" || path == ":memory:" {
+-		opts = badger.DefaultOptions("").WithInMemory(true)
++		opts = badger.DefaultOptions("").WithLoggingLevel(badger.WARNING).WithInMemory(true)
+ 	}
+ 	store, err := badgerstore.OpenWithOptions(opts)
+ 	if err != nil {

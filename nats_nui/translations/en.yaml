@@ -1,0 +1,8 @@
+configuration:
+  log_level:
+    name: Log detail
+    description: >-
+      Service messages in the HA Log tab. warn is recommended for everyday use;
+      info adds diagnostic detail; error shows service errors only. Restart to
+      apply. Startup and service-exit messages are always shown. Manage server
+      connections and credentials inside NUI using Open Web UI.

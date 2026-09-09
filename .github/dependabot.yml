@@ -1,0 +1,20 @@
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+  - package-ecosystem: docker
+    directory: /nats_nui
+    schedule:
+      interval: weekly
+  - package-ecosystem: gomod
+    directory: /nats_nui/dependencies
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+  - package-ecosystem: npm
+    directory: /nats_nui/dependencies
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5

@@ -1,0 +1,25 @@
+# Changelog
+
+## 0.4.0
+
+Rebuild patched Go/frontend dependencies with Go 1.27.1; run 81 frontend tests and a Linux binary vulnerability gate. Harden schema file containment and ingress request isolation. Add traversal, symlink, spoofed-header, and cross-site request regression checks.
+
+## 0.3.0
+
+- Community release candidate with pinned inputs and isolated image-build tests.
+- Release, contributor, security and licensing guidance.
+- Runtime privilege/readiness hardening and stronger release checks.
+
+
+## 0.2.1
+
+- New Info page, configuration help and general-purpose documentation.
+- Configurable service log detail; routine HTTP access logs disabled.
+- Clear startup, readiness, shutdown and service-failure messages.
+- Existing connections and ingress-only access are preserved.
+
+## 0.2.0
+
+- Require HA ingress; remove standalone port access.
+- Proxy HTTP and WebSockets only from Supervisor.
+- Bind NUI backend to container loopback; preserve connections and schemas.
