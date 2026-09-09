@@ -1,5 +1,5 @@
 name: NUI
-version: "0.4.0"
+version: "0.4.1"
 slug: nats_nui
 description: NUI management interface through Home Assistant ingress only.
 url: https://github.com/jeffglousher/ha-nats-nui
