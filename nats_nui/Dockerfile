@@ -35,7 +35,7 @@ RUN go run golang.org/x/vuln/cmd/govulncheck@v1.8.0 -mode=binary /nui-web
 
 FROM ghcr.io/nats-nui/nui:0.9.3@sha256:331b3f34f8aa626f88e3aa3e35749196607a3a56d7fddc6fb642938dcd659c04 AS runtime
 USER root
-RUN apk upgrade --no-cache && apk add --no-cache nginx tini su-exec jq && mkdir -p /run/nginx
+RUN apk upgrade --no-cache && apk add --no-cache nginx tini su-exec jq python3 && mkdir -p /run/nginx
 ARG BUILD_VERSION
 ARG BUILD_ARCH
 LABEL io.hass.type="addon" io.hass.version="${BUILD_VERSION}" io.hass.arch="${BUILD_ARCH}"
@@ -44,6 +44,7 @@ RUN rm -rf /frontend/dist && mkdir -p /frontend/dist
 COPY --from=backend /src/frontend/dist /frontend/dist
 COPY nginx.conf /etc/nginx/nginx.conf
 COPY run.sh /run.sh
+COPY provision.py /provision.py
 COPY ha-init.js /frontend/dist/ha-init.js
 RUN grep -q '<head>' /frontend/dist/index.html \
     && sed -i 's|<head>|<head><script src="./ha-init.js"></script>|' /frontend/dist/index.html
@@ -53,6 +54,8 @@ CMD []
 
 FROM runtime AS validation
 RUN apk upgrade --no-cache && apk add --no-cache python3 nodejs
+COPY tests/provision.py /provision-test.py
+RUN python3 /provision-test.py
 COPY tests/runtime.py /runtime-test.py
 COPY tests/frontend.cjs /frontend/tests/frontend.cjs
 COPY ha-init.js /frontend/ha-init.js

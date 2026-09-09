@@ -6,11 +6,15 @@
    administrators**, save, and start the app. Enable **Start on boot** and
    **Watchdog** on the Info page.
 2. Select **Open Web UI**. Optionally enable **Show in sidebar**.
-3. In NUI, select **ALL**, then **NEW** to add a connection.
-4. Enter a name and your server address, such as `nats://NATS_HOST:4222`.
-5. Choose the server's authentication method, enter its credentials and save.
-6. Select the connection and use its action icons to browse streams, messages
-   or key/value buckets.
+3. With the companion NATS app running in shared-token mode without TLS, wait
+   up to 15 seconds for **Local NATS** to appear automatically.
+4. Select the connection to browse streams, messages or key/value buckets.
+5. To add other servers, select **ALL**, then **NEW**. Enter a name, server
+   address and authentication details, then save. TLS and individual-user
+   connections also use this editor.
+
+The local connection is imported once. Edit or delete it in NUI; restarting
+will not overwrite your changes or recreate a deleted connection.
 
 NUI connects to the server from inside Home Assistant. `localhost` refers to
 the NUI container, not your computer or another app. Use a hostname or address
@@ -26,7 +30,7 @@ do not bookmark an internal ingress URL, which is session-dependent.
 
 The gateway accepts only HA Supervisor requests carrying a listed user's ID.
 The NUI backend is reachable
-only inside its own container. No HA API, host-network or privileged access is
+only inside its own container. No Home Assistant Core API, host-network or privileged access is
 required. When using HA remotely, use your normal secure HA access method.
 
 Access to this app permits use of its saved NATS credentials. Broker permissions
@@ -123,3 +127,28 @@ requests. NUI manages broker credentials and can modify broker data: grant acces
 only to broker administrators. Schema files are confined to the configured schema
 directory. The image rebuilds patched dependencies and runs security regression
 tests before installation.
+
+## Automatic local connection setup
+
+When both companion apps are installed from their published repositories, NUI
+imports a local connection into an untouched database. It uses the broker's HA
+internal DNS name, not localhost or a LAN IP. NATS must be running with a valid
+shared token and TLS disabled. TLS and individual-user deployments use NUI's
+normal connection editor; provisioning never weakens authentication or TLS.
+
+HA's Services API currently supports MQTT and MySQL, not NATS. These apps use
+the documented internal app network and default-role Supervisor metadata API.
+The NATS provisioning listener has no host port and accepts only the actual
+companion NUI app address verified against Supervisor. Forwarded identity/IP
+headers are not trusted. This trusts HA's isolated app network, not a separate
+cryptographic peer identity. Other apps cannot retrieve the connection through
+this endpoint. NUI has no manager role or access to other apps' options.
+
+Once a connection exists or provisioning is attempted, a durable completion
+marker prevents future imports. Deleting or editing a connection in NUI is
+permanent: restarts and upgrades do not recreate or overwrite it. An interrupted
+import may need manual completion in NUI rather than an unsafe automatic retry.
+Installing NATS later is supported while NUI remains untouched. A clean NUI
+uninstall removes both its database and this marker and permits first setup again.
+Broker startup settings remain solely in the NATS app Configuration; connection
+settings live solely in NUI. The NATS Provision local NUI option disables sharing.
