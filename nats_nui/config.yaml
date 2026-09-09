@@ -21,6 +21,9 @@ map:
     path: /db
 options:
   log_level: warn
+  console_admin_user_ids: []
 schema:
   log_level: list(info|warn|error)
+  console_admin_user_ids:
+    - "match(^[0-9a-f]{32}$)"
 watchdog: http://[HOST]:8099/health

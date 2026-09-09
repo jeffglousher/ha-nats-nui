@@ -1,4 +1,11 @@
 configuration:
+  console_admin_user_ids:
+    name: Console administrators
+    description: >-
+      Home Assistant user IDs allowed to open NUI and use its saved broker
+      credentials. Empty denies everyone. Enter the 32-character user ID, not a
+      name, password or token. Save and restart to apply. Sidebar visibility alone
+      does not restrict ingress access; only listed users are authorized here.
   log_level:
     name: Log detail
     description: >-

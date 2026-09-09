@@ -2,7 +2,9 @@
 
 ## Quick start
 
-1. Start the app. Enable **Start on boot** and **Watchdog** on the Info page.
+1. In Configuration, add authorized Home Assistant user IDs to **Console
+   administrators**, save, and start the app. Enable **Start on boot** and
+   **Watchdog** on the Info page.
 2. Select **Open Web UI**. Optionally enable **Show in sidebar**.
 3. In NUI, select **ALL**, then **NEW** to add a connection.
 4. Enter a name and your server address, such as `nats://NATS_HOST:4222`.
@@ -22,7 +24,8 @@ session and proxies the page, API and WebSocket connection. There are no host
 ports to configure and no standalone LAN URL. Use **Open Web UI** or the sidebar;
 do not bookmark an internal ingress URL, which is session-dependent.
 
-The gateway accepts only HA Supervisor requests. The NUI backend is reachable
+The gateway accepts only HA Supervisor requests carrying a listed user's ID.
+The NUI backend is reachable
 only inside its own container. No HA API, host-network or privileged access is
 required. When using HA remotely, use your normal secure HA access method.
 
@@ -31,6 +34,22 @@ determine what those connections can do; HA sign-in does not create separate
 NATS accounts. Grant app access only to people who should manage those servers.
 
 ## Configuration
+
+### Console administrators
+
+Default: **empty**, which denies access to the interface, API and WebSockets.
+List the Home Assistant user IDs authorized to manage every saved NUI connection.
+Use the 32-character lowercase hexadecimal ID, not a name, password or access
+token. Find it on the user's Home Assistant details page. Save and restart to
+apply additions and removals; the previous list stays active until restart.
+Changing a listed user's HA role does not remove them from this explicit list.
+Only the read-only
+health endpoint permits Supervisor requests without a user identity for Watchdog.
+
+The administrator-only sidebar setting controls visibility; it does not enforce
+ingress authorization. This list is the access boundary. An explicitly listed
+user can manage all saved broker connections, so include only intended operators.
+After upgrading from 0.4.1, populate this list before reopening NUI.
 
 ### Log detail
 
@@ -71,6 +90,8 @@ update in place and reopen through HA. No connection re-entry is required.
 
 - **Page will not open:** check the app is running and open it from HA again.
   Old direct-port or internal ingress bookmarks are not supported.
+- **403 Forbidden:** verify your Home Assistant user ID is listed in Console
+  administrators, then save and restart. An empty list deliberately blocks access.
 - **Connection fails:** verify the broker is reachable from HA and check its
   port, authentication method, token or credentials, and TLS requirements.
   After correcting a failed connection change, reopen the connection or retry
@@ -95,7 +116,8 @@ steps. Remove credentials and private message content before sharing.
 
 ## Security boundaries
 
-The ingress panel is administrator-only. Home Assistant authenticates access;
+The ingress panel is hidden from non-administrators. Home Assistant authenticates
+the session; the gateway separately authorizes the configured user IDs, then
 the gateway strips HA credentials before forwarding and rejects cross-site browser
 requests. NUI manages broker credentials and can modify broker data: grant access
 only to broker administrators. Schema files are confined to the configured schema

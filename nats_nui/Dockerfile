@@ -40,7 +40,7 @@ COPY run.sh /run.sh
 COPY ha-init.js /frontend/dist/ha-init.js
 RUN grep -q '<head>' /frontend/dist/index.html \
     && sed -i 's|<head>|<head><script src="./ha-init.js"></script>|' /frontend/dist/index.html
-RUN chmod 755 /run.sh && nginx -t
+RUN chmod 755 /run.sh && touch /run/nginx/console-admins.map && nginx -t
 ENTRYPOINT ["/sbin/tini", "-g", "--", "/run.sh"]
 CMD []
 
