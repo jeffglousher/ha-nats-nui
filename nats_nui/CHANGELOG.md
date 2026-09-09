@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.4.2
+
+Require an explicit list of Home Assistant user IDs for console access. The list
+starts empty and denies access until configured; sidebar visibility alone is
+insufficient authorization. Watchdog retains a restricted health endpoint.
+
+Prevent concurrent connection deletion and requests from racing in the connection
+pool. Retry after a failed connection refresh instead of reusing the closed
+connection. Synchronize status notifications with subscription cancellation and
+close notification channels when a connection closes. Run the full connection
+package and regression tests with Go's race detector during each image build.
+
 ## 0.4.1
 
 Apply Alpine security updates during builds, including patched OpenSSL libraries.

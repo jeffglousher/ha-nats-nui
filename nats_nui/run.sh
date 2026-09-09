@@ -7,6 +7,13 @@ log_level=$(jq -er '.log_level // "warn" | select(. == "info" or . == "warn" or 
     exit 1
 }
 mkdir -p /db/protoschemas/default /run/nginx
+jq -e '(if has("console_admin_user_ids") then .console_admin_user_ids else [] end)
+    | type == "array" and length <= 128
+    and all(.[]; type == "string" and length == 32 and test("^[0-9a-f]{32}$"))' /db/options.json >/dev/null 2>&1 || {
+    log ERROR "Invalid Console administrators setting. Use Home Assistant user IDs (32 lowercase hexadecimal characters) and restart."
+    exit 1
+}
+jq -r '(.console_admin_user_ids // []) | unique[] | "\(.) 1;"' /db/options.json > /run/nginx/console-admins.map
 chown -R nui:nui /db
 nginx -t
 log INFO "Starting NUI. Access is through Home Assistant ingress only."

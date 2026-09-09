@@ -1,0 +1,19 @@
+--- a/internal/connection/pool.go
++++ b/internal/connection/pool.go
+@@ -59,6 +59,8 @@
+ }
+ 
+ func (p *ConnPool[T]) Purge() {
++	p.m.Lock()
++	defer p.m.Unlock()
+ 	for k, c := range p.conns {
+ 		if _, err := p.repo.GetById(k); err != nil {
+ 			c.Close()
+@@ -73,6 +75,7 @@
+ 		return err
+ 	}
+ 	if currentConn, ok := p.conns[id]; ok {
++		delete(p.conns, id)
+ 		currentConn.Close()
+ 	}
+ 	conn, err := p.build(c)

@@ -1,0 +1,142 @@
+--- a/internal/connection/nconn.go
++++ b/internal/connection/nconn.go
+@@ -38,6 +38,8 @@
+ }
+ 
+ func (n *NatsConn) LastEvent() (string, error) {
++	n.eventHandleMutex.Lock()
++	defer n.eventHandleMutex.Unlock()
+ 	return n.lastStatus, n.lastError
+ }
+ 
+@@ -50,8 +52,8 @@
+ func (n *NatsConn) buildStatusHandler(status string) nats.ConnHandler {
+ 	return func(conn *nats.Conn) {
+ 		var err error
+-		if n.Conn.Status() != nats.CONNECTED {
+-			err = n.Conn.LastError()
++		if conn.Status() != nats.CONNECTED {
++			err = conn.LastError()
+ 		}
+ 		n.handleEvent(status, err)
+ 	}
+@@ -62,6 +64,8 @@
+ 	defer n.eventHandleMutex.Unlock()
+ 	n.lastStatus = status
+ 	n.lastError = err
++	n.subsMutex.Lock()
++	defer n.subsMutex.Unlock()
+ 	for _, s := range n.connectionEventsSubs {
+ 		select {
+ 		case s.events <- ConnStatusChanged{status, err}:
+@@ -90,12 +94,13 @@
+ }
+ 
+ func (n *NatsConn) Close() {
+-	n.subsMutex.Lock()
+-	defer n.subsMutex.Unlock()
+ 	if !n.mockMode {
+ 		n.Conn.Close()
+ 	}
++	n.subsMutex.Lock()
++	defer n.subsMutex.Unlock()
+ 	for _, s := range n.connectionEventsSubs {
++		close(s.events)
+ 		s.stop()
+ 	}
+ 	n.connectionEventsSubs = nil
+--- a/internal/connection/nconn_test.go
++++ b/internal/connection/nconn_test.go
+@@ -2,51 +2,59 @@
+ 
+ import (
+ 	"context"
+-	"github.com/stretchr/testify/assert"
+-	"github.com/stretchr/testify/require"
+ 	"testing"
+ 	"time"
+ )
+ 
+ func TestNatsConn_ObserveConnectionEvents(t *testing.T) {
+ 	nconn, _ := newMocked()
+-
++	defer nconn.Close()
+ 	status, _ := nconn.LastEvent()
+-	assert.Equal(t, "disconnected", status)
+-
+-	events1 := []string{}
+-	events2 := []string{}
++	if status != "disconnected" {
++		t.Fatal(status)
++	}
+ 	ch1 := nconn.ObserveConnectionEvents(context.Background())
+ 	ctx2, cancel := context.WithCancel(context.Background())
++	defer cancel()
+ 	ch2 := nconn.ObserveConnectionEvents(ctx2)
+-
+-	go func() {
+-		for e := range ch1 {
+-			events1 = append(events1, e.Status)
++	expect := func(ch <-chan ConnStatusChanged, status string) {
++		t.Helper()
++		select {
++		case event, ok := <-ch:
++			if !ok || event.Status != status {
++				t.Fatalf("expected %s, got %v, open=%v", status, event, ok)
++			}
++		case <-time.After(time.Second):
++			t.Fatal("event did not arrive")
+ 		}
+-	}()
+-
+-	go func() {
+-		for e := range ch2 {
+-			events2 = append(events2, e.Status)
++	}
++	nconn.DisconnectErrHandler()(nconn.Conn, nil)
++	expect(ch1, "disconnected")
++	expect(ch2, "disconnected")
++	nconn.ReconnectHandler()(nconn.Conn)
++	expect(ch1, "connected")
++	expect(ch2, "connected")
++	cancel()
++	select {
++	case _, ok := <-ch2:
++		if ok {
++			t.Fatal("cancelled subscription remains open")
+ 		}
+-	}()
+-
+-	nconn.DisconnectErrHandler()(nconn.Conn, nil)
++	case <-time.After(time.Second):
++		t.Fatal("cancelled subscription did not close")
++	}
+ 	nconn.ReconnectHandler()(nconn.Conn)
+-
+-	cancel()
+-	time.Sleep(1 * time.Second)
++	expect(ch1, "connected")
++	nconn.ClosedHandler()(nconn.Conn)
++	expect(ch1, "disconnected")
++	nconn.Close()
+ 	nconn.ReconnectHandler()(nconn.Conn)
+-
+-	nconn.ClosedHandler()(nconn.Conn)
+-	nconn.Close()
+-
+-	nconn.ReconnectHandler()(nconn.Conn)
+-
+-	require.EventuallyWithT(t, func(c *assert.CollectT) {
+-		assert.Equal(t, []string{"disconnected", "connected", "connected", "disconnected"}, events1)
+-		assert.Equal(t, []string{"disconnected", "connected"}, events2)
+-	}, 1*time.Second, time.Millisecond*20)
+-
++	select {
++	case _, ok := <-ch1:
++		if ok {
++			t.Fatal("closed connection subscription remains open")
++		}
++	case <-time.After(time.Second):
++		t.Fatal("connection close did not close subscription")
++	}
+ }
