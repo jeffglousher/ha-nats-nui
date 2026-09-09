@@ -1,5 +1,8 @@
 # 0.4.3
 
+- Rebuild closed cached connections and return bucket errors without crashing NUI.
+- Check watcher creation before reading bucket updates.
+
 - Fix key/value bucket size, maximum value size and replica settings being
   silently ignored because frontend field names differed from nats.go JSON.
 - Populate those settings correctly when reopening a bucket for editing.

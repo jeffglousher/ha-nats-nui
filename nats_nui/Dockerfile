@@ -22,6 +22,10 @@ COPY patches/connection-pool.patch /tmp/connection-pool.patch
 RUN git apply --check /tmp/connection-pool.patch && git apply /tmp/connection-pool.patch
 COPY patches/connection-events.patch /tmp/connection-events.patch
 RUN git apply --check /tmp/connection-events.patch && git apply /tmp/connection-events.patch
+COPY patches/bucket-recovery.patch /tmp/bucket-recovery.patch
+RUN git apply --check /tmp/bucket-recovery.patch && git apply /tmp/bucket-recovery.patch
+COPY tests/bucket_errors_test.go /src/internal/nui/ha_bucket_errors_test.go
+RUN go test ./internal/nui -run TestHABucketUnavailable -count=1
 COPY tests/connection_pool_test.go /src/internal/connection/ha_pool_test.go
 RUN CGO_ENABLED=1 go test -race ./internal/connection -count=1 -timeout=2m
 COPY tests/schema_security_test.go /src/internal/protoschema/ha_security_test.go

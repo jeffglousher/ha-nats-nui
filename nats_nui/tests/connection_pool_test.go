@@ -107,3 +107,17 @@ func TestHAConnPoolConcurrentPurgeAndRefresh(t *testing.T) {
 	}
 	workers.Wait()
 }
+
+func (c *haPoolConn) IsClosed() bool { return c.closes.Load() > 0 }
+
+func TestHAConnPoolReplacesClosedConnection(t *testing.T) {
+    repo := NewMemConnRepo()
+    _, _ = repo.Save(&Connection{Id: "test"})
+    pool := NewConnPool[*haPoolConn](repo, func(*Connection) (*haPoolConn, error) { return &haPoolConn{}, nil })
+    first, err := pool.Get("test")
+    if err != nil { t.Fatal(err) }
+    first.Close()
+    second, err := pool.Get("test")
+    if err != nil { t.Fatal(err) }
+    if first == second || second.IsClosed() { t.Fatal("closed cached connection was returned") }
+}
