@@ -8,7 +8,7 @@ contract = remote-record / installation-identity / connection-settings / board-e
            get-response / send-request / send-response / register-request /
            register-response / status-request / status-response / present-request /
            present-response / acknowledge-request / acknowledge-response /
-           error-response / infrastructure-report / resource-migration-report / remote-envelope
+           error-response / infrastructure-report / remote-envelope
 
 ; NUI filename-based selection and Rust validation share this one contract.
 agent-board = contract
@@ -311,12 +311,12 @@ opaque-cursor = tstr .size (1..2048)
 ; AGENT_BOARD_CONTROL: identities/bindings/leases/cursor secret, no expiry / 8 MiB.
 ; AGENT_BOARD_RETRIES: idempotency/read projections/throttles, 8 days / 16 MiB.
 ; Each resource has a distinct live description and owner/schema/role metadata.
-; Retired legacy aliases are migrated explicitly before deletion, never by reads.
+; Retired resource names block provisioning; reads never migrate or delete data.
 ; Describes policy fields; NATS also serializes server-default fields.
 ; These are native NATS configuration objects, not board-message payloads.
 ; Provisioned only by the mailbox manager. Units for durations are nanoseconds.
-; Names/metadata must additionally match the configured installation identity.
-managed-transport = owned-stream
+; Ownership metadata identifies this tooling; machine identity is in the payload.
+managed-transport = owned-stream / owned-control / owned-retries
 owned-stream = {
   name: "AGENT_BOARD",
   description: "Agent board: native CBOR notices and explicit receipts; 7-day retention; consumer-free mailbox reads.",
@@ -333,9 +333,44 @@ owned-stream = {
   metadata: {
     "agentboard.owner": "agent-message-board",
     "agentboard.schema": "v1",
-    "agentboard.role": "mailbox"
-  }
+    "agentboard.role": "mailbox",
+    nats-server-metadata
+  },
+  * tstr => any ; additional NATS configuration fields are verified in Rust
 }
+owned-control = {
+  name: "KV_AGENT_BOARD_CONTROL",
+  description: "Agent board control: installation/project bindings, mailboxes, session leases, cursor secret and migration markers; no message bodies; no expiry.",
+  subjects: ["$KV.AGENT_BOARD_CONTROL.>"],
+  max_age: 0, max_bytes: 8388608,
+  metadata: {
+    "agentboard.owner": "agent-message-board", "agentboard.schema": "v1",
+    "agentboard.role": "control", nats-server-metadata
+  },
+  owned-kv-policy,
+  * tstr => any
+}
+owned-retries = {
+  name: "KV_AGENT_BOARD_RETRIES",
+  description: "Agent board retries: publication idempotency, receipt/read projections and hook throttles; no message bodies; 8-day retention.",
+  subjects: ["$KV.AGENT_BOARD_RETRIES.>"],
+  max_age: 691200000000000, max_bytes: 16777216,
+  metadata: {
+    "agentboard.owner": "agent-message-board", "agentboard.schema": "v1",
+    "agentboard.role": "retries", nats-server-metadata
+  },
+  owned-kv-policy,
+  * tstr => any
+}
+owned-kv-policy = (
+  retention: "limits", storage: "file", num_replicas: 1,
+  max_msg_size: 16384, max_msgs_per_subject: 1,
+  discard: "new", allow_rollup_hdrs: true, deny_delete: true,
+  allow_direct: true
+)
+nats-server-metadata = (
+  ? "_nats.ver": tstr, ? "_nats.level": tstr, ? "_nats.req.level": tstr
+)
 ; Read-only deployment audit; apply changes annotations only after full preflight.
 ; This does not authorize retention changes or deleting/migrating any bucket.
 infrastructure-report = {
@@ -359,10 +394,3 @@ infrastructure-resource = {
 
 ; Private connection settings (not mailbox payloads).
 connection-settings = { ? url: uri-text, ? token_file: tstr .size (1..1024), ? creds: tstr .size (1..1024) }
-
-; Explicit Rust deployment response, not mailbox content.
-resource-migration-report = {
-  operation: "migrate_resources", native_verified: uint,
-  buckets: [2*2 { bucket: "AGENT_BOARD_CONTROL" / "AGENT_BOARD_RETRIES", verified: uint, encoding: "cbor" }],
-  archive: tstr, old_resources_deleted: bool, archived_only_metadata: uint
-}

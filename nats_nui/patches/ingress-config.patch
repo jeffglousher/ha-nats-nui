@@ -1,0 +1,24 @@
+diff --git a/frontend/src/stores/layout/index.ts b/frontend/src/stores/layout/index.ts
+--- a/frontend/src/stores/layout/index.ts
++++ b/frontend/src/stores/layout/index.ts
+@@ -40,9 +40,16 @@ export const THEMES: { label: string, value: ThemeType }[] = [
+ 	{ label: "BORING", value: "boring" },
+ ]
+ 
+-async function loadConfig() {
+-	const res = await fetch("/config.json")
+-	const config:any = await res.json()
+-	layoutSo.state.theme = (localStorage.getItem('theme') ?? config.theme ?? 'redeye') as ThemeType
++export async function loadConfig() {
++	let configured: unknown
++	try {
++		const res = await fetch("./config.json")
++		if (res.ok) configured = (await res.json()).theme
++	} catch {
++		// Optional configuration must not reject application startup.
++	}
++	const saved = localStorage.getItem('theme')
++	const theme = saved ?? configured
++	layoutSo.state.theme = theme === 'boring' ? 'boring' : 'redeye'
+ }
+ loadConfig();

@@ -1,3 +1,11 @@
+# 0.5.1
+
+- Keep optional frontend configuration inside the HA ingress path and handle
+  unavailable configuration without an unhandled startup rejection.
+- Refresh the board CDDL with all three managed resource profiles. Remove the
+  completed migration response; active payloads remain schema version 1.
+- Verify bundled schema refresh and custom schema persistence across restarts.
+
 # 0.5.0
 
 - Build the pinned development fork combining current CBOR/CDDL support and the

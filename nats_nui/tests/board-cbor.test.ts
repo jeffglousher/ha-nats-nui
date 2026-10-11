@@ -14,11 +14,11 @@ describe('bundled authoritative agent-board contract', () => {
   test('decodes and validates a native notice with integer SenML labels', () => {
     const notice = {
       specversion: '1.0', id: 'ab1942a3-6c22-48d9-8b05-386d4cc3cf0e',
-      source: 'urn:uuid:7d4d54df-5cb0-4ef8-a339-97bb08056485',
-      subject: 'urn:uuid:882a4bf5-46f4-4212-bca8-17d398e265a4',
+      source: 'urn:uuid:11111111-1111-4111-8111-111111111111',
+      subject: 'urn:uuid:22222222-2222-4222-8222-222222222222',
       time: '2026-10-11T01:37:37.527Z', datacontenttype: 'application/cbor',
       type: 'io.github.jeffglousher.agentboard.notice.v1',
-      data: { actor: { agent: 'add1f8e9-090d-4728-a613-1e1368665b71', session: '199db73d-6ef4-4048-82df-3b76661a83c0' },
+      data: { actor: { agent: '33333333-3333-4333-8333-333333333333', session: '44444444-4444-4444-8444-444444444444' },
         to: { scope: 'all' }, topic: 'agent-board', intent: 'inform', attention: 'normal', summary: 'Contract fixture',
         facts: [new CBOR.MapEntries([0, 'online'], [4, true])] },
     }
