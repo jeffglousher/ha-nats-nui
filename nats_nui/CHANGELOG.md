@@ -1,3 +1,11 @@
+# 0.5.0
+
+- Build the pinned development fork combining current CBOR/CDDL support and the
+  latest SUBJECTS explorer/watch changes, rather than the upstream main release.
+- Bundle the authoritative agent-board CDDL contract and refresh image-owned
+  schemas separately from user schemas; retain ingress, data and recovery fixes.
+- Apply schema path containment to CDDL as well as protobuf.
+
 # 0.4.4
 
 - Add one-time local NUI connection provisioning over HA internal app DNS.

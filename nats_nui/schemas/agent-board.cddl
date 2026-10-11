@@ -1,0 +1,361 @@
+; Authoritative agent-board contract: version 1 native CBOR; prerelease.
+; The built-in adapter supports poll. inject/wake/present/presence are reserved
+; capability-gated shapes, not claims of implemented harness delivery.
+; Structural source: semantic validation and state transitions are implemented in Rust.
+; Reuses CloudEvents 1.0 attributes and a bounded RFC 8428 SenML profile.
+; CDDL cannot establish receipt truth, authorization or exactly-once execution.
+contract = remote-record / installation-identity / connection-settings / board-event / check-request / check-response / get-request /
+           get-response / send-request / send-response / register-request /
+           register-response / status-request / status-response / present-request /
+           present-response / acknowledge-request / acknowledge-response /
+           error-response / infrastructure-report / remote-envelope
+
+; NUI filename-based selection and Rust validation share this one contract.
+agent-board = contract
+; Stable resource names: event type suffixes, payload version=1 and this
+; explicit metadata envelope version carry schema evolution.
+remote-envelope = { version: 1, data: remote-record / register-request }
+
+board-event = notice-event / receipt-event / presence-event
+
+; source = urn:uuid:<persistent machine-installation UUID>.
+; subject = urn:uuid:<stable project UUID>, including for receipts/presence.
+; The event identity is the CloudEvents pair (source, id).
+event-context = (
+  specversion: "1.0",
+  id: uuid-text,
+  source: uri-text,
+  subject: uri-text,
+  "time": timestamp,
+  datacontenttype: "application/cbor" / "application/json"
+)
+notice-event = {
+  event-context,
+  type: "io.github.jeffglousher.agentboard.notice.v1",
+  data: notice
+}
+receipt-event = {
+  event-context,
+  type: "io.github.jeffglousher.agentboard.receipt.v1",
+  data: receipt
+}
+presence-event = {
+  event-context,
+  type: "io.github.jeffglousher.agentboard.presence.v1",
+  data: presence
+}
+
+actor = {
+  agent: uuid-text,                  ; stable logical agent identity
+  session: uuid-text,                ; registered harness-session binding
+  ? label: tstr .size (1..80)
+}
+event-ref = { source: uri-text, id: uuid-text }
+audience = cell-audience / project-audience / agent-audience
+; Explicit cell-wide notice; subject still identifies the sender's project.
+cell-audience = { scope: "all" }
+project-audience = { scope: "project" }
+agent-audience = {
+  scope: "agent",
+  agent: uuid-text,
+  ? project: uuid-text,              ; recipient project; defaults to sender project
+  ? machine: uuid-text,
+  ? session: uuid-text
+}
+
+notice = {
+  actor: actor,
+  to: audience,
+  topic: segment,
+  intent: "inform" / "request" / "reply",
+  attention: "normal" / "urgent",    ; scheduling hint, never permission to interrupt
+  summary: tstr .size (1..512),        ; bounded check output, authored by sender
+  ? body: tstr .size (1..8192),        ; get separately; no logs/transcripts by default
+  ? thread: uuid-text,
+  ? inreplyto: event-ref,
+  ? supersedes: event-ref,
+  ? expires: timestamp,
+  ? facts: senml-pack,
+  ? refs: [1*8 artifact-ref]
+}
+artifact-ref = {
+  "uri": uri-text,
+  ? title: tstr .size (1..160),
+  ? mediatype: tstr .size (1..128),
+  ? sha256: tstr .size 64
+}
+
+receipt = {
+  message: event-ref,
+  mailbox: uuid-text,
+  actor: actor,
+  disposition,
+  ? detail: tstr .size (1..512)
+}
+disposition = (
+  (issuer: "adapter", stage: "queued" / "presented" / "unknown",
+   presentation: uuid-text) //
+  (issuer: "agent", stage: "acknowledged" / "declined",
+   ? presentation: uuid-text)
+)
+presence = {
+  actor: actor,
+  mailbox: uuid-text,
+  state: "idle" / "busy" / "offline",
+  expires: timestamp,
+  capabilities: [1*3 delivery-capability],
+  ? facts: senml-pack
+}
+delivery-capability = "poll" / "inject" / "wake"
+
+; Abstract operation objects shared by CLI, daemon IPC and MCP adapters.
+; These are not a new RPC protocol: RPC envelopes belong to their bindings.
+check-request = {
+  operation: "check",
+  mailbox: uuid-text,
+  session: uuid-text,
+  ? topics: [1*16 segment],
+  ? cursor: opaque-cursor,
+  ? limit: 1..50,
+  ? maxbytes: 1024..16384
+}
+check-response = {
+  operation: "check",
+  mailbox: uuid-text,
+  snapshot: opaque-cursor,
+  items: [*50 mailbox-item],
+  complete: bool,
+  ? next: opaque-cursor,
+  retentiongap: bool,
+  ? invalidrecords: uint,
+  broker: "connected" / "offline"
+}
+get-request = {
+  operation: "get",
+  mailbox: uuid-text,
+  session: uuid-text,
+  message: event-ref
+}
+get-response = {
+  operation: "get",
+  mailbox: uuid-text,
+  event: notice-event,
+  state: "unread" / "presented" / "acknowledged" / "declined" / "unknown"
+}
+send-request = { operation: "send", event: board-event }
+send-response = {
+  operation: "send",
+  event: event-ref,
+  stage: "outbox" / "stored" / "unknown"
+}
+register-request = {
+  operation: "register",
+  registrationid: uuid-text,
+  mailbox: uuid-text,
+  agent: uuid-text,
+  project: uuid-text,
+  machine: uuid-text,
+  session: uuid-text,
+  harness: tstr .size (1..80),
+  nativeid: tstr .size (1..256),
+  capabilities: [1*3 delivery-capability],
+  policy: "poll" / "queue" / "wake",
+  ? label: tstr .size (1..80)
+}
+register-response = {
+  operation: "register",
+  registrationid: uuid-text,
+  mailbox: uuid-text,
+  capabilities: [1*3 delivery-capability],
+  policy: "poll" / "queue" / "wake",
+  leaseexpires: timestamp
+}
+status-request = { operation: "status", mailbox: uuid-text }
+status-response = {
+  operation: "status",
+  mailbox: uuid-text,
+  broker: "connected" / "offline",
+  worker: "not_required",
+  policy: "poll" / "queue" / "wake",
+  capabilities: [1*3 delivery-capability],
+  ? lastsync: timestamp
+}
+installation-identity = { format: 1, machine: uuid-text }
+; Authoritative CBOR metadata in NATS KV. No notice bodies are cached here.
+remote-record = remote-binding / remote-mailbox / remote-actor / remote-event-index /
+                remote-receipt-reservation / remote-read-state / register-request /
+                remote-incarnation / remote-cursor-secret / remote-migration / remote-hook-check
+remote-hook-check = { checked: int }
+remote-publication = remote-event-index / remote-receipt-reservation
+remote-binding = { name: tstr .size (1..4096), id: uuid-text }
+remote-mailbox = {
+  identity: { agent: uuid-text, project: uuid-text, machine: uuid-text },
+  sessions: [*64 { id: uuid-text, binding: { harness: tstr .size (1..80), nativeid: tstr .size (1..256) }, expires: int }]
+}
+remote-actor = { mailbox: uuid-text }
+remote-event-index = { requesthash: tstr .size 64, digest: tstr .size 64, subject: tstr .size (1..512), "time": timestamp, ? sequence: uint .gt 0 }
+remote-receipt-reservation = { requesthash: tstr .size 64, "time": timestamp }
+remote-read-state = { receipt: event-ref, sequence: uint .gt 0 }
+remote-incarnation = { created: tstr .size (1..128) }
+remote-cursor-secret = { secret: tstr .size (1..256) }
+remote-migration = { archivehash: tstr .size 64, mailboxes: uint, bindings: uint }
+; HMAC-SHA256 authenticated CBOR cursor: base64url(payload).base64url(mac).
+; Bounds arrivals by upper sequence; receipt state is read live on each page.
+remote-cursor = {
+  scope: tstr .size 64, ; SHA-256 of canonical CBOR query parameters
+  created: tstr .size (1..128), issued: int, upper: uint, after: uint, first: uint, snapshot: uuid-text
+}
+error-response = {
+  operation: "check" / "get" / "send" / "register" / "status" /
+             "present" / "acknowledge" / "invalid",
+  error: {
+    code: "invalid" / "unauthorized" / "unavailable" / "conflict" /
+          "not_found" / "expired" / "budget" / "cursor_invalid" /
+          "unsupported" / "unknown_outcome",
+    detail: tstr .size (1..512),
+    retry: "same_id" / "after_reconnect" / "reconcile" / "never"
+  }
+}
+mailbox-item = {
+  message: event-ref,
+  "time": timestamp,
+  actor: actor,
+  topic: segment,
+  intent: "inform" / "request" / "reply",
+  attention: "normal" / "urgent",
+  summary: tstr .size (1..512),
+  state: "unread" / "presented" / "acknowledged" / "declined" / "unknown",
+  ? expires: timestamp
+}
+; A presentation ticket is persisted BEFORE invoking a live session adapter.
+; Reuse (mailbox, session, checkid) and the identical event list on uncertain retry.
+present-request = {
+  operation: "present",
+  mailbox: uuid-text,
+  session: uuid-text,
+  checkid: uuid-text,
+  messages: [1*50 event-ref]
+}
+present-response = {
+  operation: "present",
+  mailbox: uuid-text,
+  checkid: uuid-text,
+  stage: "queued" / "presented" / "unknown",
+  ? detail: tstr .size (1..512)
+}
+; Reading/checking is side-effect-free. Only this explicit operation records ack.
+acknowledge-request = {
+  operation: "acknowledge",
+  mailbox: uuid-text,
+  actor: actor,
+  message: event-ref,
+  receiptid: uuid-text,
+  stage: "acknowledged" / "declined",
+  ? detail: tstr .size (1..512)
+}
+acknowledge-response = {
+  operation: "acknowledge",
+  receipt: event-ref,
+  stored: bool
+}
+
+; Bounded text/CBOR profile of SenML. Arbitrary metric names are permitted in n.
+; All scalar value forms retain RFC 8428 meanings; there are no custom labels.
+; Exactly one value per record is an intentional profile restriction. Base-only
+; records, sums, mandatory extensions and bver feature masks are not in this draft.
+; Each pack stands alone: bn/bt/bu/bv do not carry across JetStream messages.
+senml-pack = [1*32 senml-record]
+senml-record = senml-text-record / senml-cbor-record
+senml-text-record = {
+  ? bn: uri-text,
+  ? bt: number,
+  ? bu: tstr .size (1..32),
+  ? bv: number,
+  ? bver: 10,
+  n: tstr .size (1..256),
+  ? u: tstr .size (1..32),
+  ? t: number,
+  ? ut: number .ge 0,
+  senml-value
+}
+senml-value = (
+  (v: number) // (vs: tstr .size (0..1024)) //
+  (vb: bool) // (vd: tstr .size (0..2048))
+)
+; RFC 8428 CBOR labels; vd is binary, not base64 text, on the native wire.
+senml-cbor-record = {
+  ? -2: uri-text,
+  ? -3: number,
+  ? -4: tstr .size (1..32),
+  ? -5: number,
+  ? -1: 10,
+  0: tstr .size (1..256),
+  ? 1: tstr .size (1..32),
+  ? 6: number,
+  ? 7: number .ge 0,
+  ( (2: number) // (3: tstr .size (0..1024)) // (4: bool) // (8: bstr .size (0..1536)) )
+}
+
+; RFC 9562 UUID text, RFC 3986 URI and RFC 3339 UTC timestamp syntax require
+; semantic validation beyond these portable RFC 8610 structural bounds.
+uuid-text = tstr .size 36
+uri-text = tstr .size (1..1024)
+timestamp = tstr .size (20..30)
+segment = tstr .size (1..80)
+opaque-cursor = tstr .size (1..2048)
+
+; Managed bounded profile of existing NATS stream/consumer configuration.
+; Owned stream/bucket names use UPPER_SNAKE_CASE. NATS automatically prefixes
+; bucket backing streams with KV_; lower-case message subjects are unchanged.
+; AGENT_BOARD: native CBOR notices/receipts, 7 days / 16 MiB.
+; AGENT_BOARD_CONTROL: identities/bindings/leases/cursor secret, no expiry / 8 MiB.
+; AGENT_BOARD_RETRIES: idempotency/read projections/throttles, 8 days / 16 MiB.
+; Each resource has a distinct live description and owner/schema/role metadata.
+; Retired legacy aliases are migrated explicitly before deletion, never by reads.
+; Describes policy fields; NATS also serializes server-default fields.
+; These are native NATS configuration objects, not board-message payloads.
+; Provisioned only by the mailbox manager. Units for durations are nanoseconds.
+; Names/metadata must additionally match the configured installation identity.
+managed-transport = owned-stream
+owned-stream = {
+  name: "AGENT_BOARD",
+  description: "Agent board: native CBOR notices and explicit receipts; 7-day retention; consumer-free mailbox reads.",
+  subjects: ["agentboard.>"],
+  retention: "limits",
+  storage: "file",
+  num_replicas: 1,
+  max_consumers: 16,
+  max_age: 604800000000000,
+  max_bytes: 16777216,
+  max_msg_size: 16384,
+  discard: "old",
+  consumer_limits: { inactive_threshold: 86400000000000, max_ack_pending: 64 },
+  metadata: {
+    "agentboard.owner": "agent-message-board",
+    "agentboard.schema": "v1",
+    "agentboard.role": "mailbox"
+  }
+}
+; Read-only deployment audit; apply changes annotations only after full preflight.
+; This does not authorize retention changes or deleting/migrating any bucket.
+infrastructure-report = {
+  operation: "infrastructure",
+  applied: bool,
+  resources: [3*3 infrastructure-resource],
+  obsolete: [* tstr],
+  unrelated: [* tstr]
+}
+infrastructure-resource = {
+  stream: tstr,
+  bucket: tstr / null,
+  role: "mailbox" / "control" / "retries",
+  state: "missing" / "consistent" / "annotation_drift" / "conflict",
+  ? description: tstr / null,
+  ? messages: uint,
+  ? consumers: uint,
+  ? maxage: uint, ; seconds; control intentionally has no expiry
+  ? maxbytes: int
+}
+
+; Private connection settings (not mailbox payloads).
+connection-settings = { ? url: uri-text, ? token_file: tstr .size (1..1024), ? creds: tstr .size (1..1024) }

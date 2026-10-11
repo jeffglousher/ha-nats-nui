@@ -62,6 +62,9 @@ def check_trusted_ingress(allowed):
 
 p=start()
 try:
+    schemas = json.loads(get('/api/cddl'))
+    assert 'bundled/agent-board' in json.dumps(schemas), 'bundled CDDL missing from running API'
+    assert Path('/db/cddlschemas/bundled/agent-board.cddl').read_bytes() == Path('/usr/share/nui/cddlschemas/agent-board.cddl').read_bytes()
     check_trusted_ingress(True)
     try: urllib.request.urlopen('http://127.0.0.1:8099/',timeout=2)
     except urllib.error.HTTPError as e: assert e.code==403
