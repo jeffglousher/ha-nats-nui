@@ -4,6 +4,9 @@ from pathlib import Path
 Path('/db').mkdir(exist_ok=True)
 ADMIN_ID = 'a' * 32
 Path('/db/options.json').write_text(json.dumps({'log_level': 'warn', 'console_admin_user_ids': [ADMIN_ID]}))
+custom_schema = Path('/db/cddlschemas/default/operator.cddl')
+custom_schema.parent.mkdir(parents=True, exist_ok=True)
+custom_schema.write_text('operator = { online: bool }\n')
 log=tempfile.TemporaryFile()
 def get(path):
     with urllib.request.urlopen('http://127.0.0.1:31311'+path,timeout=2) as r: return r.read()
@@ -65,6 +68,7 @@ try:
     schemas = json.loads(get('/api/cddl'))
     assert 'bundled/agent-board' in json.dumps(schemas), 'bundled CDDL missing from running API'
     assert Path('/db/cddlschemas/bundled/agent-board.cddl').read_bytes() == Path('/usr/share/nui/cddlschemas/agent-board.cddl').read_bytes()
+    assert 'default/operator' in json.dumps(schemas)
     check_trusted_ingress(True)
     try: urllib.request.urlopen('http://127.0.0.1:8099/',timeout=2)
     except urllib.error.HTTPError as e: assert e.code==403
@@ -85,11 +89,17 @@ try:
     req=urllib.request.Request('http://127.0.0.1:31311/api/connection',data=json.dumps(payload).encode(),headers={'Content-Type':'application/json'})
     with urllib.request.urlopen(req,timeout=3) as r: assert r.status==200
 finally:stop(p)
+# Emulate an image upgrade: stale bundled files must be refreshed without
+# replacing operator-owned schemas or saved connections.
+Path('/db/cddlschemas/bundled/agent-board.cddl').write_text('stale = null\n')
 Path('/db/options.json').write_text('{"log_level":"warn","console_admin_user_ids":[]}')
 p=start()
 try:
     check_trusted_ingress(False)
     assert any(c['name']=='Release persistence test' for c in json.loads(get('/api/connection')))
+    assert custom_schema.read_text() == 'operator = { online: bool }\n'
+    assert Path('/db/cddlschemas/bundled/agent-board.cddl').read_bytes() == Path('/usr/share/nui/cddlschemas/agent-board.cddl').read_bytes()
+    assert 'default/operator' in json.dumps(json.loads(get('/api/cddl')))
     os.kill(int(Path('/run/nginx/nginx.pid').read_text()),signal.SIGTERM)
     assert p.wait(timeout=10)!=0,'gateway failure did not stop app'
 finally:stop(p)

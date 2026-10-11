@@ -13,6 +13,9 @@ RUN git apply --check /tmp/bucket-wire-format.patch && git apply /tmp/bucket-wir
 COPY tests/buckets.test.ts /src/frontend/src/api/buckets.test.ts
 COPY schemas/agent-board.cddl /src/agent-board.cddl
 COPY tests/board-cbor.test.ts /src/frontend/src/utils/cbor/ha-contract.test.ts
+COPY patches/ingress-config.patch /tmp/ingress-config.patch
+RUN git apply --check /tmp/ingress-config.patch && git apply /tmp/ingress-config.patch
+COPY tests/ingress-config.test.ts /src/frontend/src/stores/layout/ha-ingress.test.ts
 RUN cd frontend && npm ci --ignore-scripts --no-audit --no-fund && npm exec -- vitest run && npm run build
 # No non-ingress listener: the backend is reachable only inside this container.
 RUN grep -F 'return a.Listen(":" + a.Port)' internal/nui/server.go \

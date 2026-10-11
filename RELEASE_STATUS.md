@@ -1,22 +1,19 @@
-# Release readiness — 0.4.0 candidate
+# Development container 0.5.1
 
-## Verified
+The app builds NUI fork commit `46bca9281a3254a3ce66deb56c44faffc205991a`
+with SUBJECTS/watch and CBOR/CDDL support. It bundles the schema version 1 board
+contract and preserves custom schemas and saved connections in the data volume.
 
-- Release metadata, translations, pinned build inputs and minimal privileges.
-- Native amd64 image build and isolated runtime regression tests.
-- Authentication, persistence, restart recovery and secret-safe service logging.
-- NUI ingress HTTP, assets, API and WebSockets; anonymous/direct access rejected.
-- Schema traversal and symlink escape rejection; HA credentials stripped by proxy.
-- All 81 upstream frontend tests and production frontend build.
-- Patched dependency lockfiles and Go server vulnerability analysis. The remaining
-  module-level GO-2026-5932 advisory affects the unused OpenPGP package; no
-  vulnerable server calls were identified. Linux binary scanning is a build gate.
+The image build runs frontend tests, schema containment checks, connection
+recovery tests, ingress authorization tests and restart persistence checks.
+Release checks build and scan both amd64 and aarch64 images. Check the results
+on the pull request for the exact revision being installed.
 
-## Remaining release gates
+Production verification uses the deployed app through authenticated HA ingress:
+open the saved connection, list streams and subjects, decode a retained board
+event as CBOR and validate it with the bundled CDDL. An image build or readiness
+log alone does not establish this behavior.
 
-- Native arm64 image builds and full container operating-system vulnerability scan.
-- Fresh repository installation and cold backup/restore on a disposable HA system.
-- Final license/attribution review and release evidence for supported platforms.
-
-Source publication is separate from declaring a stable supported release. See
-RELEASING.md for the complete release checklist.
+This is a development deployment. Fresh installation and cold backup/restore on
+a disposable HA system remain separate community-release checks in
+[RELEASING.md](RELEASING.md).

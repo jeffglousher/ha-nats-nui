@@ -53,7 +53,6 @@ health endpoint permits Supervisor requests without a user identity for Watchdog
 The administrator-only sidebar setting controls visibility; it does not enforce
 ingress authorization. This list is the access boundary. An explicitly listed
 user can manage all saved broker connections, so include only intended operators.
-After upgrading from 0.4.1, populate this list before reopening NUI.
 
 ### Log detail
 
@@ -155,7 +154,7 @@ settings live solely in NUI. The NATS Provision local NUI option disables sharin
 
 ## Development payload inspection
 
-This container pins the development fork integration 46bca9281a3254a3ce66deb56c44faffc205991a
+App 0.5.1 pins the development fork integration 46bca9281a3254a3ce66deb56c44faffc205991a
 (current CBOR/CDDL plus latest SUBJECTS explorer/watch), rather than the upstream
 release source. The server reports 0.9.3-ha-cbor-subjects.2+46bca928. Existing ingress,
 connection recovery and dependency overlays are retained.
