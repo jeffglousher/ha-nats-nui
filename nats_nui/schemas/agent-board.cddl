@@ -8,7 +8,7 @@ contract = remote-record / installation-identity / connection-settings / board-e
            get-response / send-request / send-response / register-request /
            register-response / status-request / status-response / present-request /
            present-response / acknowledge-request / acknowledge-response /
-           error-response / infrastructure-report / remote-envelope
+           error-response / infrastructure-report / resource-migration-report / remote-envelope
 
 ; NUI filename-based selection and Rust validation share this one contract.
 agent-board = contract
@@ -27,7 +27,7 @@ event-context = (
   source: uri-text,
   subject: uri-text,
   "time": timestamp,
-  datacontenttype: "application/cbor" / "application/json"
+  datacontenttype: "application/cbor"
 )
 notice-event = {
   event-context,
@@ -359,3 +359,10 @@ infrastructure-resource = {
 
 ; Private connection settings (not mailbox payloads).
 connection-settings = { ? url: uri-text, ? token_file: tstr .size (1..1024), ? creds: tstr .size (1..1024) }
+
+; Explicit Rust deployment response, not mailbox content.
+resource-migration-report = {
+  operation: "migrate_resources", native_verified: uint,
+  buckets: [2*2 { bucket: "AGENT_BOARD_CONTROL" / "AGENT_BOARD_RETRIES", verified: uint, encoding: "cbor" }],
+  archive: tstr, old_resources_deleted: bool, archived_only_metadata: uint
+}
