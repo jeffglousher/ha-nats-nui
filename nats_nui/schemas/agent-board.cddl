@@ -4,7 +4,7 @@
 ; Structural source: semantic validation and state transitions are implemented in Rust.
 ; Reuses CloudEvents 1.0 attributes and a bounded RFC 8428 SenML profile.
 ; CDDL cannot establish receipt truth, authorization or exactly-once execution.
-contract = remote-record / installation-identity / connection-settings / board-event / check-request / check-response / get-request /
+contract = installation-identity / connection-settings / board-event / check-request / check-response / get-request /
            get-response / send-request / send-response / register-request /
            register-response / status-request / status-response / present-request /
            present-response / acknowledge-request / acknowledge-response /
@@ -371,7 +371,7 @@ owned-kv-policy = (
 nats-server-metadata = (
   ? "_nats.ver": tstr, ? "_nats.level": tstr, ? "_nats.req.level": tstr
 )
-; Read-only deployment audit; apply changes annotations only after full preflight.
+; Read-only deployment audit; apply repairs descriptions after ownership preflight.
 ; This does not authorize retention changes or deleting/migrating any bucket.
 infrastructure-report = {
   operation: "infrastructure",
