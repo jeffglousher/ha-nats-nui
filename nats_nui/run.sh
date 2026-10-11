@@ -6,7 +6,9 @@ log_level=$(jq -er '.log_level // "warn" | select(. == "info" or . == "warn" or 
     log ERROR "Invalid Log detail setting. Select info, warn, or error in Configuration and restart."
     exit 1
 }
-mkdir -p /db/protoschemas/default /run/nginx
+mkdir -p /db/protoschemas/default /db/cddlschemas/default /db/cddlschemas/bundled /run/nginx
+# Refresh only image-owned schemas. User CDDL files in default remain untouched.
+cp /usr/share/nui/cddlschemas/*.cddl /db/cddlschemas/bundled/
 jq -e '(if has("console_admin_user_ids") then .console_admin_user_ids else [] end)
     | type == "array" and length <= 128
     and all(.[]; type == "string" and length == 32 and test("^[0-9a-f]{32}$"))' /db/options.json >/dev/null 2>&1 || {
@@ -17,7 +19,7 @@ jq -r '(.console_admin_user_ids // []) | unique[] | "\(.) 1;"' /db/options.json 
 chown -R nui:nui /db
 nginx -t
 log INFO "Starting NUI. Access is through Home Assistant ingress only."
-env -u SUPERVISOR_TOKEN su-exec nui /cmd/nui-web --db-path=/db --proto-schemas-path=/db/protoschemas/default --log-level="$log_level" --nats-cli-contexts= &
+env -u SUPERVISOR_TOKEN su-exec nui /cmd/nui-web --db-path=/db --proto-schemas-path=/db/protoschemas/default --cddl-schemas-path=/db/cddlschemas --log-level="$log_level" --nats-cli-contexts= &
 nui_pid=$!
 python3 /provision.py &
 provision_pid=$!

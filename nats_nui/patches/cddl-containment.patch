@@ -1,0 +1,27 @@
+diff --git a/internal/cddlschema/filesystem_repo.go b/internal/cddlschema/filesystem_repo.go
+index 33b88428..7323b607 100644
+--- a/internal/cddlschema/filesystem_repo.go
++++ b/internal/cddlschema/filesystem_repo.go
+@@ -46,7 +46,7 @@ func (r *FileSystemCddlRepo) AllInPath(dir string) (map[string]*CddlSchema, erro
+ 			return err
+ 		}
+ 
+-		if d.IsDir() || !strings.HasSuffix(d.Name(), ".cddl") {
++		if d.IsDir() || d.Type()&os.ModeSymlink != 0 || !strings.HasSuffix(d.Name(), ".cddl") {
+ 			return nil
+ 		}
+ 
+@@ -120,7 +120,12 @@ func (r *FileSystemCddlRepo) GetByIdInPath(id, dir string) (*CddlSchema, error)
+ }
+ 
+ func (r *FileSystemCddlRepo) loadSchemaFromFile(filePath, id, relPath string) (*CddlSchema, error) {
+-	content, err := os.ReadFile(filePath)
++	root, err := os.OpenRoot(r.baseDir)
++	if err != nil { return nil, errors.New("schema directory unavailable") }
++	defer root.Close()
++	relative, err := filepath.Rel(r.baseDir, filePath)
++	if err != nil || !filepath.IsLocal(relative) { return nil, errors.New("schema path outside directory") }
++	content, err := root.ReadFile(relative)
+ 	if err != nil {
+ 		return nil, fmt.Errorf("failed to read cddl file %s: %w", filePath, err)
+ 	}
