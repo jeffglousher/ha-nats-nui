@@ -1,3 +1,9 @@
+# 0.5.2
+
+- Refresh the verbatim board CDDL from agent-message-board `8780b1b` for Hearth
+  options, structured decisions, setup markers and exact outgoing retry plans.
+- Keep the development NUI fork and dependency pins unchanged.
+
 # 0.5.1
 
 - Keep optional frontend configuration inside the HA ingress path and handle

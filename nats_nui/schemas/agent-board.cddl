@@ -8,7 +8,7 @@ contract = installation-identity / connection-settings / board-event / check-req
            get-response / send-request / send-response / register-request /
            register-response / status-request / status-response / present-request /
            present-response / acknowledge-request / acknowledge-response /
-           error-response / infrastructure-report / remote-envelope
+           error-response / infrastructure-report / remote-envelope / contributor-options / contributor-response / contributor-setup
 
 ; NUI filename-based selection and Rust validation share this one contract.
 agent-board = contract
@@ -181,10 +181,27 @@ status-response = {
   ? lastsync: timestamp
 }
 installation-identity = { format: 1, machine: uuid-text }
-; Authoritative CBOR metadata in NATS KV. No notice bodies are cached here.
+; Authoritative CBOR metadata in NATS KV. No inbound notice bodies are cached.
+; Contributor plans retain only exact outgoing replies/receipts until delivered.
 remote-record = remote-binding / remote-mailbox / remote-actor / remote-event-index /
                 remote-receipt-reservation / remote-read-state / register-request /
-                remote-incarnation / remote-cursor-secret / remote-migration / remote-hook-check
+                remote-incarnation / remote-cursor-secret / remote-migration / remote-hook-check / remote-contributor-plan
+; HA options/Responses JSON are explicit text boundaries; retries remain native CBOR.
+contributor-options = {
+  version: 1,
+  nats_url: tstr .size (1..2048),
+  ? nats_token: tstr .size (0..4096),
+  project: uuid-text,
+  native_id: tstr .size (1..256),
+  conversation_entity: tstr .size (1..160),
+  trigger_token: tstr .size (32..128)
+}
+contributor-response = {
+  version: 1,
+  contribution: null / { reply_to: uuid-text, summary: tstr .size (1..280), body: tstr .size (1..4096) }
+}
+remote-contributor-plan = { mailbox: uuid-text, requests: [1*11 (send-request / acknowledge-request)] }
+contributor-setup = { version: 1, entity: tstr, flow_id: tstr }
 remote-hook-check = { checked: int }
 remote-publication = remote-event-index / remote-receipt-reservation
 remote-binding = { name: tstr .size (1..4096), id: uuid-text }
@@ -309,7 +326,7 @@ opaque-cursor = tstr .size (1..2048)
 ; bucket backing streams with KV_; lower-case message subjects are unchanged.
 ; AGENT_BOARD: native CBOR notices/receipts, 7 days / 16 MiB.
 ; AGENT_BOARD_CONTROL: identities/bindings/leases/cursor secret, no expiry / 8 MiB.
-; AGENT_BOARD_RETRIES: idempotency/read projections/throttles, 8 days / 16 MiB.
+; AGENT_BOARD_RETRIES: idempotency/read projections/throttles and pending outgoing plans, 8 days / 16 MiB.
 ; Each resource has a distinct live description and owner/schema/role metadata.
 ; Retired resource names block provisioning; reads never migrate or delete data.
 ; Describes policy fields; NATS also serializes server-default fields.
@@ -352,7 +369,7 @@ owned-control = {
 }
 owned-retries = {
   name: "KV_AGENT_BOARD_RETRIES",
-  description: "Agent board retries: publication idempotency, receipt/read projections and hook throttles; no message bodies; 8-day retention.",
+  description: "Agent board retries: publication idempotency, receipt/read projections, hook throttles and exact pending outgoing contributor plans; no inbound mail cache; 8-day retention.",
   subjects: ["$KV.AGENT_BOARD_RETRIES.>"],
   max_age: 691200000000000, max_bytes: 16777216,
   metadata: {
