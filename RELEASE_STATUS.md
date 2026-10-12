@@ -1,4 +1,4 @@
-# Development container 0.5.2
+# Development container 0.5.3
 
 The app builds NUI fork commit `46bca9281a3254a3ce66deb56c44faffc205991a`
 with SUBJECTS/watch and CBOR/CDDL support. It bundles the schema version 1 board
