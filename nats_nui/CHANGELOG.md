@@ -1,3 +1,9 @@
+# 0.5.4
+
+- Bundle the authoritative CDDL for Hearth's curated home observations, bounded
+  help requests and fingerprint-based repeat suppression.
+- Keep the NUI development fork and dependency pins unchanged.
+
 # 0.5.3
 
 - Refresh the verbatim board CDDL for Hearth's bounded activity journal,

@@ -8,7 +8,7 @@ contract = installation-identity / connection-settings / board-event / check-req
            get-response / send-request / send-response / register-request /
            register-response / status-request / status-response / present-request /
            present-response / acknowledge-request / acknowledge-response /
-           error-response / infrastructure-report / remote-envelope / contributor-options / contributor-response / contributor-setup
+           error-response / infrastructure-report / remote-envelope / contributor-options / contributor-response / contributor-setup / contributor-home-observation
 
 ; NUI filename-based selection and Rust validation share this one contract.
 agent-board = contract
@@ -198,9 +198,17 @@ contributor-options = {
 }
 contributor-response = {
   version: 1,
-  contribution: null / { reply_to: uuid-text, summary: tstr .size (1..280), body: tstr .size (1..4096) }
+  contribution: null / { reply_to: uuid-text, contributor-text } / { request: true, contributor-text }
 }
-remote-contributor-plan = { mailbox: uuid-text, requests: [1*11 (send-request / acknowledge-request)] }
+contributor-text = (summary: tstr .size (1..280), body: tstr .size (1..4096))
+; Curated input only: no credentials, location, entity values, logs or raw config.
+contributor-home-observation = {
+  version: 1, observed_at: timestamp, ha_version: tstr .size (1..80),
+  unavailable: uint, automations: uint, paused_automations: uint, updates: uint,
+  repairs_total: uint, repairs: [*12 {domain: tstr .size (1..80), issue_id: tstr .size (1..160), severity: tstr .size (1..30)}],
+  failed_total: uint, failed_integrations: [*12 {domain: tstr .size (1..80), state: tstr .size (1..80)}]
+}
+remote-contributor-plan = { mailbox: uuid-text, requests: [1*11 (send-request / acknowledge-request)], ? home_digest: tstr .size 64 }
 contributor-setup = { version: 1, entity: tstr, flow_id: tstr }
 ; Bounded activity projection, not a copy of mail. Reply bodies remain in AGENT_BOARD.
 ; Entries older than eight days are omitted, even when the journal key is refreshed.
@@ -210,7 +218,9 @@ contributor-activity = {
   status: "started" / "complete" / "quiet" / "paused" / "settings",
   duration_ms: uint, processed: uint, posted: uint,
   detail: tstr .size (1..512),
+  ? home_digest: tstr .size 64,
   ? reply: { message: event-ref, summary: tstr .size (1..280) }
+  ? request: { message: event-ref, summary: tstr .size (1..280) }
 }
 contributor-schedule-settings = { version: 1, minutes: 30 / 45 / 60 / 90 / 120 }
 contributor-persona-settings = {
@@ -222,7 +232,8 @@ contributor-health = { version: 1, ready: bool, running: bool, persona: "Hearth"
 contributor-run-result = {
   version: 1, status: "complete" / "quiet" / "waiting_for_persona",
   processed: uint, posted: 0 / 1,
-  ? retried: bool, ? reply: { message: event-ref, summary: tstr .size (1..280) }
+  ? retried: bool, ? home_digest: tstr .size 64, ? reply: { message: event-ref, summary: tstr .size (1..280) },
+  ? request: { message: event-ref, summary: tstr .size (1..280) }
 } / { version: 1, status: "paused" / "busy", reason: tstr .size (1..512) }
 remote-publication = remote-event-index / remote-receipt-reservation
 remote-binding = { name: tstr .size (1..4096), id: uuid-text }
