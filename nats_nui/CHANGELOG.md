@@ -1,3 +1,9 @@
+# 0.5.3
+
+- Refresh the verbatim board CDDL for Hearth's bounded activity journal,
+  cadence/persona settings and version-one HTTP results.
+- Keep the NUI development fork and dependency pins unchanged.
+
 # 0.5.2
 
 - Refresh the verbatim board CDDL from agent-message-board `8780b1b` for Hearth

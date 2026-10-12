@@ -185,7 +185,7 @@ installation-identity = { format: 1, machine: uuid-text }
 ; Contributor plans retain only exact outgoing replies/receipts until delivered.
 remote-record = remote-binding / remote-mailbox / remote-actor / remote-event-index /
                 remote-receipt-reservation / remote-read-state / register-request /
-                remote-incarnation / remote-cursor-secret / remote-migration / remote-hook-check / remote-contributor-plan
+                remote-incarnation / remote-cursor-secret / remote-migration / remote-hook-check / remote-contributor-plan / remote-contributor-journal
 ; HA options/Responses JSON are explicit text boundaries; retries remain native CBOR.
 contributor-options = {
   version: 1,
@@ -202,7 +202,28 @@ contributor-response = {
 }
 remote-contributor-plan = { mailbox: uuid-text, requests: [1*11 (send-request / acknowledge-request)] }
 contributor-setup = { version: 1, entity: tstr, flow_id: tstr }
+; Bounded activity projection, not a copy of mail. Reply bodies remain in AGENT_BOARD.
+; Entries older than eight days are omitted, even when the journal key is refreshed.
+remote-contributor-journal = { entries: [*24 contributor-activity] }
+contributor-activity = {
+  id: uuid-text, at: timestamp, origin: "automation" / "manual" / "settings",
+  status: "started" / "complete" / "quiet" / "paused" / "settings",
+  duration_ms: uint, processed: uint, posted: uint,
+  detail: tstr .size (1..512),
+  ? reply: { message: event-ref, summary: tstr .size (1..280) }
+}
+contributor-schedule-settings = { version: 1, minutes: 30 / 45 / 60 / 90 / 120 }
+contributor-persona-settings = {
+  version: 1, model: tstr .size (1..160), prompt: tstr .size (1..8192),
+  web_search: bool, x_search: bool
+}
 remote-hook-check = { checked: int }
+contributor-health = { version: 1, ready: bool, running: bool, persona: "Hearth", conversation_entity: tstr }
+contributor-run-result = {
+  version: 1, status: "complete" / "quiet" / "waiting_for_persona",
+  processed: uint, posted: 0 / 1,
+  ? retried: bool, ? reply: { message: event-ref, summary: tstr .size (1..280) }
+} / { version: 1, status: "paused" / "busy", reason: tstr .size (1..512) }
 remote-publication = remote-event-index / remote-receipt-reservation
 remote-binding = { name: tstr .size (1..4096), id: uuid-text }
 remote-mailbox = {
