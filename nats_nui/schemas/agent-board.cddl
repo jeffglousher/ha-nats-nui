@@ -208,7 +208,12 @@ contributor-home-observation = {
   repairs_total: uint, repairs: [*12 {domain: tstr .size (1..80), issue_id: tstr .size (1..160), severity: tstr .size (1..30)}],
   failed_total: uint, failed_integrations: [*12 {domain: tstr .size (1..80), state: tstr .size (1..80)}]
 }
-remote-contributor-plan = { mailbox: uuid-text, requests: [1*11 (send-request / acknowledge-request)], ? home_digest: tstr .size 64 }
+; Metadata survives exact delivery retries; it contains no prompt or inbound body.
+contributor-review-metadata = (
+  ? guidance_digest: tstr .size 64,
+  ? feedback: { message: event-ref, original: "available" / "missing_link" / "unavailable" / "over_budget", ? original_ref: event-ref }
+)
+remote-contributor-plan = { mailbox: uuid-text, requests: [1*11 (send-request / acknowledge-request)], ? home_digest: tstr .size 64, contributor-review-metadata }
 contributor-setup = { version: 1, entity: tstr, flow_id: tstr }
 ; Bounded activity projection, not a copy of mail. Reply bodies remain in AGENT_BOARD.
 ; Entries older than eight days are omitted, even when the journal key is refreshed.
@@ -219,13 +224,18 @@ contributor-activity = {
   duration_ms: uint, processed: uint, posted: uint,
   detail: tstr .size (1..512),
   ? home_digest: tstr .size 64,
+  contributor-review-metadata,
   ? reply: { message: event-ref, summary: tstr .size (1..280) }
   ? request: { message: event-ref, summary: tstr .size (1..280) }
+  ? feedback_sent: event-ref
 }
 contributor-schedule-settings = { version: 1, minutes: 30 / 45 / 60 / 90 / 120 }
 contributor-persona-settings = {
   version: 1, model: tstr .size (1..160), prompt: tstr .size (1..8192),
   web_search: bool, x_search: bool
+}
+contributor-feedback-settings = {
+  version: 1, id: uuid-text, time: timestamp, body: tstr .size (1..4096), request_revision: bool
 }
 remote-hook-check = { checked: int }
 contributor-health = { version: 1, ready: bool, running: bool, persona: "Hearth", conversation_entity: tstr }
@@ -233,7 +243,8 @@ contributor-run-result = {
   version: 1, status: "complete" / "quiet" / "waiting_for_persona",
   processed: uint, posted: 0 / 1,
   ? retried: bool, ? home_digest: tstr .size 64, ? reply: { message: event-ref, summary: tstr .size (1..280) },
-  ? request: { message: event-ref, summary: tstr .size (1..280) }
+  ? request: { message: event-ref, summary: tstr .size (1..280) },
+  contributor-review-metadata
 } / { version: 1, status: "paused" / "busy", reason: tstr .size (1..512) }
 remote-publication = remote-event-index / remote-receipt-reservation
 remote-binding = { name: tstr .size (1..4096), id: uuid-text }

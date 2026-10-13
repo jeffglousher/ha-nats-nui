@@ -1,3 +1,8 @@
+# 0.5.5
+
+- Bundle the authoritative CDDL for linked Hearth feedback, sampled guidance
+  fingerprints and exact retry provenance. Keep fork and dependency pins unchanged.
+
 # 0.5.4
 
 - Bundle the authoritative CDDL for Hearth's curated home observations, bounded
