@@ -43,7 +43,7 @@ RUN go test ./internal/cddlschema -count=1
 RUN CGO_ENABLED=0 go build -ldflags '-X main.Version=0.9.3-ha-cbor-subjects.2+46bca928' -o /nui-web ./cmd/server/main.go
 RUN go run golang.org/x/vuln/cmd/govulncheck@v1.8.0 -mode=binary /nui-web
 
-FROM ghcr.io/nats-nui/nui:0.9.3@sha256:331b3f34f8aa626f88e3aa3e35749196607a3a56d7fddc6fb642938dcd659c04 AS runtime
+FROM ghcr.io/nats-nui/nui:0.10.0@sha256:879b64b2f2fa4c3298681ed0bebfbcfd80cae281ff787a10c404bbd62160d18a AS runtime
 USER root
 RUN apk upgrade --no-cache && apk add --no-cache nginx tini su-exec jq python3 && mkdir -p /run/nginx
 ARG BUILD_VERSION
